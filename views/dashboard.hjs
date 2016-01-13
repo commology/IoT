@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  {{<head}}
+  {{/head}}
+</head>
+<body class='metro'>
+  {{>header}}
+  {{>body}}
+  {{>footer}}
+</body>
+</html>
