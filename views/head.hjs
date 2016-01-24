@@ -2,8 +2,8 @@
   <meta http-equiv='X-UA-Compatible' content='IE=edge' >
   <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
   <title>IoT Dashboard</title>
-  <link rel='icon' href='/monitor/test/favicon.ico' type='image/x-icon' />
-  <link rel='shortcut icon' href='/monitor/test/favicon.ico' type='image/x-icon' />
+  <link rel='icon' href='/IoT/favicon.ico' type='image/x-icon' />
+  <link rel='shortcut icon' href='/IoT/favicon.ico' type='image/x-icon' />
   <link rel='stylesheet' href='https://code.jquery.com/ui/1.11.4/themes/black-tie/jquery-ui.min.css' />
   <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css' />
   <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -14,6 +14,8 @@
   <script lang='javascript' type='text/javascript' src='https://code.jquery.com/jquery-1.12.0.min.js'></script>
   <script lang='javascript' type='text/javascript' src='https://code.jquery.com/ui/1.11.4/jquery-ui.min.js'></script>
   <script lang='javascript' type='text/javascript' src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js'></script>
-  <script lang='javascript' type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js'></script>
-  <script src="http://echarts.baidu.com/build/dist/echarts.js"></script>
+<!--
+  <script src="http://echarts.baidu.com/vendors/echarts/echarts-all-3.0.0.js"></script>
+-->
+  <script src="http://echarts.baidu.com/dist/echarts.min.js"></script>
   <script lang='javascript' type='text/javascript' src='/IoT/js/main.js'></script>

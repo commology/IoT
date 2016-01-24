@@ -1,9 +1,17 @@
 var express = require('express');
 var router = express.Router();
 
-/* GET users listing. */
 router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
+  var json = {};
+  json.partials =
+              {
+                head: 'head',
+                body: 'chart',
+                header: 'header',
+                footer: 'footer'
+              };
+  res.charset = 'utf-8';
+  res.render('dashboard', json);
 });
 
 module.exports = router;

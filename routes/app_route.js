@@ -14,6 +14,7 @@ var cfg = require('../modules/config.js');
 var log = require('../modules/logger.js');
 
 router.use('/dashboard', require('./dashboard.js'));
+router.use('/data', require('./data-restapi.js'));
 
 router.get('/', function(req, res) {
   res.redirect('dashboard/');
@@ -30,6 +31,10 @@ router.get('/head', function(req, res) {
 
 router.get('/dashboard', function(req, res) {
   res.redirect('dashboard/');
+});
+
+router.get('/data', function(req, res) {
+  res.redirect('data/');
 });
 
 module.exports = router;

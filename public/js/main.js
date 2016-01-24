@@ -1,96 +1,158 @@
 $(function() {
-  Chart.defaults.global.responsive = true;
   drawChart();
 });
 
-function drawChart() {
-  require.config({
-    paths: {
-      echarts: 'http://echarts.baidu.com/build/dist'
-    }
+function updateData(chart, option) {
+  $.ajax({
+    url: '/IoT/data',
+    cache: false
+  })
+  .done(function(datajson) {
+    var timestr = [];
+    datajson.timestring.forEach(function (element, index, array) {
+      var s = element.substring(11, 19);
+      timestr.push(s);
+    });
+    option.xAxis[0].data = timestr;
+    option.xAxis[1].data = timestr;
+    option.series[0].data = datajson.temperature;
+    option.series[1].data = datajson.humidity;
+    chart.setOption(option);
   });
-  
-  require([
-    'echarts',
-    'echarts/chart/line',
-    'echarts/chart/bar'
-  ],
-  function (ec) {
-    var myChart = ec.init(document.getElementById('eChart')); 
-    var option = {
-      tooltip: {
-        trigger: 'axis'
+}
+
+function drawChart() {
+
+  var mainChart = echarts.init(document.getElementById('eChart'));
+
+  var option = {
+    title: {
+      text: 'Simple Realtime Monitoring',
+      x: 'center'
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: function (params) {
+        var unit = '';
+        if (params[0].seriesName == 'Temp.')
+          unit = 'C';
+        if (params[0].seriesName == 'R.H.')
+          unit = '%';
+        return params[0].name + '<br/>' +
+               params[0].seriesName + ' : ' + params[0].value + unit;
       },
-      toolbox: {
-      show: true,
-      feature: {
-        mark: {
-          show: true
-        },
-        dataView: {
-          show: true,
-          readOnly: true
-        },
-        magicType: {
-          show: true,
-          type: [
-            'line',
-            'bar'
-          ]
-        },
-        restore: {
-          show: true
-        },
-        saveAsImage: {
-          show: true
-        }
+      axisPointer: {
+        animation: false
       }
     },
-    calculable: true,
     legend: {
-      data: [ '蒸发量', '降水量', '平均温度' ]
+      data: ['Temp.', 'R.H.'],
+      x: 'left',
+      left: 100
     },
+    grid: [
+      {
+        show: true,
+        containLabel: true,
+        height: '35%'
+      },
+      {
+        show: true,
+        containLabel: true,
+        top: '55%',
+        height: '35%'
+      }
+    ],
     xAxis: [
       {
+        gridIndex: 0,
         type: 'category',
-        data: [ '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月' ]
+        boundaryGap: false,
+        axisLabel: {
+          interval: 5
+        },
+        axisLine: {
+          onZero: true
+        },
+        data: []
+      },
+      {
+        gridIndex: 1,
+        type: 'category',
+        boundaryGap: false,
+        axisLabel: {
+          interval: 5
+        },
+        axisLine: {
+          onZero: true
+        },
+        data: []
       }
     ],
     yAxis: [
       {
+        gridIndex: 0,
+        name: 'Temp.',
         type: 'value',
-        name: '水量',
-        axisLabel: {
-          formatter: '{value} ml'
-        }
+        interval: 5
       },
       {
+        gridIndex: 1,
+        name: 'R.H.',
         type: 'value',
-        name: '温度',
-        axisLabel: {
-          formatter: '{value} °C'
-        }
+        interval: 10,
+        min: 0,
+        max: 100
       }
     ],
     series: [
       {
-        name: '蒸发量',
-        type: 'bar',
-        data: [ 2.0, 4.9, 7.0, 23.2, 25.6, 76.7, 135.6, 162.2, 32.6, 20.0, 6.4, 3.3 ]
-      },
-      {
-        name: '降水量',
-        type: 'bar',
-        data: [ 2.6, 5.9, 9.0, 26.4, 28.7, 70.7, 175.6, 182.2, 48.7, 18.8, 6.0, 2.3 ]
-      },
-      {
-        name: '平均温度',
+        name: 'Temp.',
         type: 'line',
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        hoverAnimation: false,
+        itemStyle: {
+          normal: {
+            color: 'Orange'
+          }
+        },
+        lineStyle: {
+          normal: {
+            color: 'Orange'
+          }
+        },
+        areaStyle: {
+          normal: {
+            color: 'Orange'
+          }
+        },
+        data: []
+      },
+      {
+        name: 'R.H.',
+        type: 'line',
+        xAxisIndex: 1,
         yAxisIndex: 1,
-        data: [ 2.0, 2.2, 3.3, 4.5, 6.3, 10.2, 20.3, 23.4, 23.0, 16.5, 12.0, 6.2 ]
+        itemStyle: {
+          normal: {
+            color: 'SkyBlue'
+          }
+        },
+        lineStyle: {
+          normal: {
+            color: 'SkyBlue'
+          }
+        },
+        data: []
       }
-    ]}; // END option
-    myChart.setOption(option); 
-  }); // END function & require
+    ]
+  };
+
+  updateData(mainChart, option);
+
+  timerTicket = setInterval(function () {
+    updateData(mainChart, option);
+  }, 5000);
 }
 
