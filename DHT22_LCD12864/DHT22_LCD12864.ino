@@ -6,32 +6,46 @@
  */
 
 #include <LiquidCrystal.h>
-#include "U8glib.h"
-#include "DHT.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <U8glib.h>
+#include <Adafruit_DHT.h>
+#include <Adafruit_BMP085.h>
 
 #define FREQ 5
 
-#define DHTPIN 2
+#define DHTPIN 8
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 
-#define ONE_WIRE_BUS 3
+#define ONE_WIRE_BUS 7
 
+#define DUST_AOUT 5     // SHARP GP2Y1010
+#define DUST_ILED 5     // 
 
-LiquidCrystal lcd(8, 7, 6, 5, 4, 3);
-U8GLIB_SH1106_128X64 u8g(10, 9, 12, 11, 13);
+//LiquidCrystal lcd(8, 7, 6, 5, 4, 3);
+
+/*
+ * SW SPI Com:
+ * SCK/CLK/D0   <---> 9
+ * MOSI/DIN/D1  <---> 10
+ * CS           <---> 11
+ * DC/A0        <---> 12
+ * RES/RST      <---> 13
+ */
+U8GLIB_SH1106_128X64 u8g(9, 10, 11, 12, 13);
 
 String dispbuf;
 
 
-DHT dht(DHTPIN, DHTTYPE);
+DHT dht22(DHTPIN, DHTTYPE);
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-OneWire oneWire(ONE_WIRE_BUS);
-
 // Pass our oneWire reference to Dallas Temperature. 
+OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature ds18b02(&oneWire);
+
+Adafruit_BMP085 bmp180;    // IIC interface
+
 
 unsigned long cyc = 0;
 unsigned long seq = 0;
@@ -56,7 +70,12 @@ void setup() {
   setup_timer();
   
   Serial.begin(38400);
-  dht.begin();
+
+  pinMode(DUST_ILED, OUTPUT);
+  digitalWrite(DUST_ILED, LOW);
+
+  dht22.begin();
+  bmp180.begin();
   ds18b02.begin();
   
   // set up the LCD's number of columns and rows:
@@ -82,67 +101,117 @@ ISR(TIMER1_COMPA_vect)          // timer compare interrupt service routine
   
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
+  float H22 = dht22.readHumidity();
   // Read temperature as Celsius
-  float t = dht.readTemperature();
-   
-  // call sensors.requestTemperatures() to issue a global temperature 
-  // request to all devices on the bus
-  ds18b02.requestTemperatures();      // Send the command to get temperatures
-  // After we got the temperatures, we can print them here.
-  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
-  float T = ds18b02.getTempCByIndex(0);   // 1-wire device index
- 
+  float T22 = dht22.readTemperature();
+
   // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
+  if (isnan(H22) || isnan(T22)) {
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
+ 
+  float BMP180_T = bmp180.readTemperature();
+  float BMP180_P = bmp180.readPressure();
+    
+  // Calculate altitude assuming 'standard' barometric pressure of 1013.25 millibar = 101325 Pascal
+  float BMP180_A = bmp180.readAltitude();
+  
+  float BMP180_SLP = bmp180.readSealevelPressure();
+
+  // you can get a more precise measurement of altitude
+  // if you know the current sea level pressure which will
+  // vary with weather and such. If it is 1015 millibars
+  // that is equal to 101500 Pascals.
+  float BMP180_Ax = bmp180.readAltitude(101500);
+   
+  // call sensors.requestTemperatures() to issue a global temperature request to all devices on the bus
+  // After we got the temperatures, we can print them here.
+  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
+  ds18b02.requestTemperatures();            // Send the command to get temperatures
+  float T18 = ds18b02.getTempCByIndex(0);   // 1-wire device index
+
+  digitalWrite(DUST_ILED, HIGH);
+  delayMicroseconds(280);
+  float aout = analogRead(DUST_AOUT);
+  delayMicroseconds(40);
+  digitalWrite(DUST_ILED, LOW);
+
+  float aoutVo = aout * 5.0 / 1024.0;
+
+  // http://www.howmuchsnow.com/arduino/airquality/
+  float dustDensity = (0.172 * aoutVo - 0.0999) * 1000;
 
   Serial.print("AMS,");
   Serial.print(seq);
+  
   Serial.print(",");
-  Serial.print(h, 1);
+  Serial.print(H22, 1);
   Serial.print(",");
-  Serial.print(t, 1);
+  Serial.print(T22, 1);
+  
+  //Serial.print(",");
+  //Serial.print(BMP180_T);
   Serial.print(",");
-  Serial.print(T);
+  Serial.print(BMP180_P);
+  Serial.print(",");
+  Serial.print(BMP180_SLP);
+  //Serial.print(",");
+  //Serial.print(BMP180_A);
+  //Serial.print(",");
+  //Serial.print(BMP180_Ax);
+  
+  Serial.print(",");
+  Serial.print(T18);
+  
+  //Serial.print(",");
+  //Serial.print(aout);
+  //Serial.print(",");
+  //Serial.print(aoutVo);
+  Serial.print(",");
+  Serial.print(dustDensity);
+  
   Serial.println();
   Serial.flush();
 
   // set the cursor to column 0, line 0
-  lcd.setCursor(0, 0);
-  lcd.print("H = ");
-  lcd.print(h, 1);
-  lcd.print("%");
+  //lcd.setCursor(0, 0);
+  //lcd.print("H = ");
+  //lcd.print(h, 1);
+  //lcd.print("%");
  
   // set the cursor to column 0, line 1
-  lcd.setCursor(0, 1);
-  lcd.print("T = ");
-  lcd.print(t, 1);
-  lcd.print("C");
+  //lcd.setCursor(0, 1);
+  //lcd.print("T = ");
+  //lcd.print(t, 1);
+  //lcd.print("C");
 
   u8g.firstPage();
   do 
   {
-    dispbuf = "# = ";
+    dispbuf = "# ";
     dispbuf.concat(seq);
     u8g.drawStr(0, 0, dispbuf.c_str());
 
     dispbuf = "";
-    dispbuf.concat(h);
-    dispbuf += "% ";
-    dispbuf.concat(t);
-    dispbuf += "C"; 
-    u8g.drawStr(0, 14, dispbuf.c_str());
+    dispbuf.concat(T22);
+    dispbuf += "C "; 
+    dispbuf.concat(H22);
+    dispbuf += "%";
+    u8g.drawStr(0, 16, dispbuf.c_str());
 
-    dispbuf = "T! = ";
-    dispbuf.concat(T);
-    u8g.drawStr(0, 28, dispbuf.c_str());
+    dispbuf = "";
+    dispbuf.concat(BMP180_P / 100);
+    dispbuf += "hPa ";
+    u8g.drawStr(0, 32, dispbuf.c_str());
+
+    dispbuf = "";
+    dispbuf.concat(dustDensity);
+    dispbuf += "ug/m3";
+    u8g.drawStr(0, 48, dispbuf.c_str());
   } while(u8g.nextPage());
 }
 
 void loop() {
-  // Wait a few seconds between measurements.
 }
 
