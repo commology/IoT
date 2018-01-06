@@ -12,6 +12,8 @@
 #include <Adafruit_DHT.h>
 #include <Adafruit_BMP085.h>
 
+#include <IRremote.h>
+
 #define FREQ 5
 
 #define DHTPIN 8
@@ -52,6 +54,10 @@ unsigned long seq = 0;
 
 const unsigned long CYC_LIMIT = FREQ * (1000L*1000L);
 
+int recvPin = 7;
+IRrecv irrecv(recvPin);
+IRsend irsend;
+
 void setup_timer() {
   // initialize timer1 
   noInterrupts();           // disable all interrupts
@@ -85,6 +91,9 @@ void setup() {
 
   cyc = 0;
   seq = 0;
+
+  irrecv.enableIRIn();  // Start the receiver
+
 }
 
 ISR(TIMER1_COMPA_vect)          // timer compare interrupt service routine
@@ -186,6 +195,9 @@ ISR(TIMER1_COMPA_vect)          // timer compare interrupt service routine
   //lcd.print(t, 1);
   //lcd.print("C");
 
+  if (seq % 5 == 3) 
+    irsend.sendRC6(0x8010A620, 32);
+
   u8g.firstPage();
   do 
   {
@@ -212,6 +224,81 @@ ISR(TIMER1_COMPA_vect)          // timer compare interrupt service routine
   } while(u8g.nextPage());
 }
 
+//+=============================================================================
+// Display IR code
+//
+void ircode(decode_results *results)
+{
+  // Panasonic has an Address
+  if (results->decode_type == PANASONIC) {
+    Serial.print(results->address, HEX);
+    Serial.print(":");
+  }
+
+  // Print Code
+  Serial.print(results->value, HEX);
+}
+
+//+=============================================================================
+// Display encoding type
+//
+void encoding(decode_results *results)
+{
+  switch (results->decode_type) {
+    default:
+    case UNKNOWN:      Serial.print("UNKNOWN");       break ;
+    case NEC:          Serial.print("NEC");           break ;
+    case SONY:         Serial.print("SONY");          break ;
+    case RC5:          Serial.print("RC5");           break ;
+    case RC6:          Serial.print("RC6");           break ;
+    case DISH:         Serial.print("DISH");          break ;
+    case SHARP:        Serial.print("SHARP");         break ;
+    case JVC:          Serial.print("JVC");           break ;
+    case SANYO:        Serial.print("SANYO");         break ;
+    case MITSUBISHI:   Serial.print("MITSUBISHI");    break ;
+    case SAMSUNG:      Serial.print("SAMSUNG");       break ;
+    case LG:           Serial.print("LG");            break ;
+    case WHYNTER:      Serial.print("WHYNTER");       break ;
+    case AIWA_RC_T501: Serial.print("AIWA_RC_T501");  break ;
+    case PANASONIC:    Serial.print("PANASONIC");     break ;
+    case DENON:        Serial.print("Denon");         break ;
+  }
+}
+
+//+=============================================================================
+// Dump out the decode_results structure.
+//
+void dumpInfo(decode_results *results)
+{
+  // Check if the buffer overflowed
+  if (results->overflow) {
+    Serial.println("IR code too long. Edit IRremoteInt.h and increase RAWLEN");
+    return;
+  }
+
+  Serial.print("# ");
+  
+  // Show Encoding standard
+  Serial.print("Encoding  : ");
+  encoding(results);
+
+  // Show Code & length
+  Serial.print("Code      : ");
+  ircode(results);
+  Serial.print(" (");
+  Serial.print(results->bits, DEC);
+  Serial.println(" bits)");
+}
+
 void loop() {
+  decode_results  results;        // Somewhere to store the results
+
+  if (irrecv.decode(&results)) {  // Grab an IR code
+    dumpInfo(&results);           // Output the results
+    //dumpRaw(&results);            // Output the results in RAW format
+    //dumpCode(&results);           // Output the results as source code
+    irrecv.resume();              // Prepare for the next value
+  }
+  // Gehua remote: P+ 0x8010A620, P- 80102621
 }
 
